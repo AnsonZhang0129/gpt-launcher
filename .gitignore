@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+.DS_Store
+*.dSYM/
+*.app/
+*.zip
+*.dmg
+*.log
+.env
+.env.*
+settings.json
+launch-events.json
+launch-status.json
+render-status.json
+coverage/

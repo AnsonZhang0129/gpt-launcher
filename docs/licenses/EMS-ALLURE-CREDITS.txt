@@ -1,0 +1,23 @@
+
+Font name:               EMS Allure
+License:                 SIL Open Font License http://scripts.sil.org/OFL
+Created by:              Sheldon B. Michaels
+SVG font conversion by:  Windell H. Oskay, smoothed and adjusted by Ellen Wasbo + generated stickfont
+A derivative of:         Allura
+Designer:                Rob Leuschke, TypeSETit
+Link:                    http://www.typesetit.com
+Google font page:        https://fonts.google.com/specimen/Allura
+
+The svg file contain glyph tables following the SVG 1.1 format http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd
+These files are ment to be used in Inkscape as single line or stroke font together with the Hershey Text extension
+or the Custom Stroke Fonts extension.
+Nothing will show up if you try to display the svg file in a browser or in vector grafics software like Inkscape
+as the paths of the glyphs are hidden in the xml code of the svg file.
+
+The _Stickfont.otf-file contain a stickfont which is a double line font and will be traced twice using a plotter. This stickfont 
+can be converted to single line font using Inkscape and the removeDuplicateLines extension 
+(http://cutlings.wasbo.net/inkscape-extension-removeduplicatelines/)
+
+The .ttf-file also contain a stickfont, but have some drawbacks when used directly for cutters and plotters. You may
+use the ttf font together with the Hershey Text tool to automatically select the corresponding single line svg font.
+(http://cutlings.wasbo.net/how-to-use-the-single-line-svg-fonts-in-inkscape/)
