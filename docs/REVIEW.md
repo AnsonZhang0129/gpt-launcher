@@ -48,10 +48,12 @@ Raw diagnostic logs, local application paths, and recordings containing personal
 
 ## Release status
 
+The owner requested noncommercial terms for this release. Original application code in v0.1.0-beta.1 uses [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0), a source-available license with commercial-use restrictions. Font data and dependencies keep their own existing licenses. Earlier public commits `0fe1e92` and `b9bbec6` were MIT-licensed; this change does not withdraw the MIT permissions already granted for those versions.
+
 The owner authorized a public release after reviewing the local build. Version 0.1.0-beta.1 is labeled a community prerelease, with the signing and test limits above. Source licenses and the distinction between source licenses and trademark rights are documented in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
 
 Only project sources and the intended app package belong in the public release. Personal settings, absolute local paths, raw launch logs, and private test recordings are excluded. SHA-256 checksums accompany the distributed package. Future Developer ID signing, notarization, and wider hardware testing are separate work; none is claimed here.
 
 ## 快速审查
 
-请主要看三个地方：名字是否写得好看、预览与正式启动是否容易理解、打开 ChatGPT 和按回车进入是否符合预期。本机已验证名字与浅色设置保存、直接回车进入、两次呼吸后自动进入，以及几组名字的书写与连接。冷启动、Intel 实机、全新 Mac 安装和未安装 ChatGPT 的现场流程尚未验证。本次以社区测试版发布；当前签名方式和未验证项目均保留说明，不作为正式稳定版兼容承诺。
+请主要看三个地方：名字是否写得好看、预览与正式启动是否容易理解、打开 ChatGPT 和按回车进入是否符合预期。本机已验证名字与浅色设置保存、直接回车进入、两次呼吸后自动进入，以及几组名字的书写与连接。冷启动、Intel 实机、全新 Mac 安装和未安装 ChatGPT 的现场流程尚未验证。本次以社区测试版发布，原创代码使用 PolyForm Noncommercial 1.0.0，允许依条款进行非商业修改和分享；字体与依赖保留各自原许可。此前两个 MIT 公开提交的既有授权不撤回。当前签名方式和未验证项目均保留说明，不作为正式稳定版兼容承诺。

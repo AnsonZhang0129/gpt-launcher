@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "A personal ribbon welcome for ChatGPT on macOS",
-  "license": "MIT",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:mac": "node scripts/build.mjs && sh scripts/native-build.sh",

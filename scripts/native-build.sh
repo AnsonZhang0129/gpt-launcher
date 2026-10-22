@@ -20,6 +20,7 @@ for SIZE in 16 32 128 256 512; do
 done
 iconutil -c icns "$BUILD/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
 cp "$ROOT/build/Animation.html" "$APP/Contents/Resources/Animation.html"
+cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE"
 if [ -d "$ROOT/docs/licenses" ]; then cp -R "$ROOT/docs/licenses" "$APP/Contents/Resources/"; fi
 if [ -f "$ROOT/THIRD_PARTY_NOTICES.md" ]; then cp "$ROOT/THIRD_PARTY_NOTICES.md" "$APP/Contents/Resources/"; fi
 cat > "$APP/Contents/Info.plist" <<'PLIST'

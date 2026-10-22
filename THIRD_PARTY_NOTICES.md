@@ -1,6 +1,6 @@
 # Third-party notices
 
-The project's MIT license covers its original application code. The following components retain their own licenses.
+This version's original application code is covered by PolyForm Noncommercial 1.0.0 (see LICENSE). The following components retain their own licenses and are not relicensed by that noncommercial restriction. Earlier public commits 0fe1e92 and b9bbec6 retain their previously granted MIT permissions.
 
 ## Ribbon Script font data — SIL Open Font License 1.1
 
@@ -13,7 +13,7 @@ The bundled stroke paths and the application's adjusted letter paths derive from
 - Smoothing and glyph adjustments: Ellen Wasbo (Cutlings).
 - Additional path, direction, and join adjustments in this project: Anson Zhang.
 
-The modified rendition is called **Ribbon Script** here. This name does not imply endorsement by the original designers. All font data, including modified glyph paths, remains under OFL 1.1 rather than the application's MIT license.
+The modified rendition is called **Ribbon Script** here. This name does not imply endorsement by the original designers. All font data, including modified glyph paths, remains under OFL 1.1 rather than the application's PolyForm Noncommercial license.
 
 Sources:
 

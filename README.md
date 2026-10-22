@@ -12,7 +12,7 @@
 [下载 macOS 测试版](https://github.com/AnsonZhang0129/gpt-launcher/releases/download/v0.1.0-beta.1/GPT-Launcher-v0.1.0-beta.1-macOS.zip) · [English](#english) · [测试记录](docs/REVIEW.md) · [许可与致谢](THIRD_PARTY_NOTICES.md)
 
 > **v0.1.0-beta.1 · 社区测试版**  
-> 独立开源项目，不是 OpenAI 官方产品，也不是 ChatGPT 客户端。需要另外安装 ChatGPT 桌面应用。当前安装包尚未经过 Apple 公证。
+> 源码公开、供非商业用途使用的独立项目，不是 OpenAI 官方产品，也不是 ChatGPT 客户端。需要另外安装 ChatGPT 桌面应用。当前安装包尚未经过 Apple 公证。
 
 ## 为你的名字写一段开场
 
@@ -77,7 +77,11 @@ pnpm run build:mac
 
 ## 许可与致谢
 
-**欢迎 Fork、修改、改进和重新分发，也允许商用。** 应用代码采用 [MIT](LICENSE) 许可，分发时保留原版权声明和许可证。字体路径来自 EMS Allure Smooth，在本项目中以 Ribbon Script 名称调整，沿用 SIL OFL 1.1。Three.js、esbuild 及 Simple Icons 路径各自保留原许可，完整来源见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+**欢迎为非商业用途 Fork、修改、改进和分享。** 本版本的原创应用代码采用 [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)，完整条款见 [LICENSE](LICENSE)。这是限制商业用途的源码可用许可；使用与分发须遵守其中的用途和声明要求。
+
+这项变更仅适用于本项目原创代码。字体路径来自 EMS Allure Smooth，在本项目中以 Ribbon Script 名称调整，继续沿用 SIL OFL 1.1；Three.js、esbuild 及 Simple Icons 路径也保留各自原许可，不受本项目新增的非商业限制约束。完整来源见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+
+**历史许可：** 提交 `0fe1e92` 和 `b9bbec6` 曾以 MIT 许可公开。本次许可变更不撤回这些历史版本已经授予的 MIT 权利。
 
 ChatGPT、GPT 和 OpenAI 标志属于其各自权利人；素材的开源许可不授予商标权。本项目与 OpenAI 无隶属或背书关系。应用图标为独立彩带图案。
 
@@ -112,4 +116,10 @@ Saved settings, early Return, keypad Enter, and automatic handoff were tested on
 
 The first version does not support Chinese names, numbers, punctuation, custom fonts, or other operating systems. Appearance selection is manual and does not track ChatGPT's settings.
 
-You are welcome to fork, modify, improve, redistribute, and use the application code commercially under MIT, while retaining the copyright and license notice. Font data and dependencies retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
+### License
+
+This version's original application code is **source-available under [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)**. Noncommercial forks, modifications, and sharing are welcome under its terms; see [LICENSE](LICENSE). This is a noncommercial license, not an OSI open-source license.
+
+Font data and third-party dependencies retain their existing licenses; the project's new noncommercial restriction does not relicense them. See [third-party notices](THIRD_PARTY_NOTICES.md).
+
+**License history:** commits `0fe1e92` and `b9bbec6` were already published under MIT. This change does not withdraw the MIT permissions previously granted for those versions.

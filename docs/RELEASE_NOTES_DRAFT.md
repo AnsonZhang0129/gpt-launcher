@@ -26,7 +26,9 @@
 - 冷启动、Intel 实机和全新 Mac 安装尚未验证。两次呼吸由动画计时控制，不代表检测到了 ChatGPT 加载完成。
 - 暂不支持中文、数字、标点或自定义字体。已检查部分姓名示例，并不保证所有字母组合都已逐一验证。
 
-应用代码采用 MIT 许可，欢迎 Fork、修改、改进和重新分发；分发时请保留版权与许可声明。字体和其他素材保留各自原许可。
+本版原创应用代码采用 [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)，欢迎遵照条款，为非商业用途 Fork、修改和分享。它是限制商业用途的源码可用许可。字体和第三方组件继续保留各自原许可。
+
+历史提交 `0fe1e92`、`b9bbec6` 已以 MIT 许可公开，本次变更不撤回这些历史版本已经授予的 MIT 权利。
 
 这是独立项目，不是 OpenAI 官方产品，也不是 ChatGPT 客户端。完整许可、素材来源和测试记录见仓库文档。
 
@@ -54,5 +56,7 @@ Download the macOS ZIP attached to this release, unzip it, and move **GPT Launch
 This beta is ad-hoc signed and **not Apple-notarized**. Downloaded copies may be blocked by macOS. Source-build instructions are in the README; disabling system security is not required.
 
 Settings persistence, Return/keypad Enter, and automatic handoff were tested on one Apple Silicon Mac with ChatGPT already running. Cold starts, Intel hardware, clean-Mac installation, and every possible name remain unverified. The handoff is timed rather than based on ChatGPT's UI loading state. Chinese names, numbers, punctuation, and custom fonts are not supported yet.
+
+Original application code in this release is source-available under [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0). Noncommercial modifications and sharing are welcome under its terms. Font data and third-party components retain their own licenses. Earlier commits `0fe1e92` and `b9bbec6` were published under MIT; their existing MIT grants are not withdrawn by this change.
 
 An independent project, not an official OpenAI product or a ChatGPT client. See the repository for licenses, attribution, and detailed test evidence.
