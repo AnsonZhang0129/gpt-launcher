@@ -77,7 +77,7 @@ pnpm run build:mac
 
 ## 许可与致谢
 
-应用代码采用 [MIT](LICENSE) 许可。字体路径来自 EMS Allure Smooth，在本项目中以 Ribbon Script 名称调整，沿用 SIL OFL 1.1。Three.js、esbuild 及 Simple Icons 路径各自保留原许可，完整来源见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+**欢迎 Fork、修改、改进和重新分发，也允许商用。** 应用代码采用 [MIT](LICENSE) 许可，分发时保留原版权声明和许可证。字体路径来自 EMS Allure Smooth，在本项目中以 Ribbon Script 名称调整，沿用 SIL OFL 1.1。Three.js、esbuild 及 Simple Icons 路径各自保留原许可，完整来源见 [第三方声明](THIRD_PARTY_NOTICES.md)。
 
 ChatGPT、GPT 和 OpenAI 标志属于其各自权利人；素材的开源许可不授予商标权。本项目与 OpenAI 无隶属或背书关系。应用图标为独立彩带图案。
 
@@ -112,4 +112,4 @@ Saved settings, early Return, keypad Enter, and automatic handoff were tested on
 
 The first version does not support Chinese names, numbers, punctuation, custom fonts, or other operating systems. Appearance selection is manual and does not track ChatGPT's settings.
 
-Project code is MIT licensed; font data and dependencies retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
+You are welcome to fork, modify, improve, redistribute, and use the application code commercially under MIT, while retaining the copyright and license notice. Font data and dependencies retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
