@@ -31,8 +31,10 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>GPT Launcher</string>
 <key>CFBundleExecutable</key><string>GPTLauncher</string>
 <key>CFBundleIdentifier</key><string>org.anson.gptlauncher</string>
-<key>CFBundleVersion</key><string>2</string>
+<key>CFBundleVersion</key><string>3</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>zh-Hans</string></array>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleIconFile</key><string>AppIcon.icns</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>

@@ -1,5 +1,21 @@
 # Beta test record / 测试版验证记录
 
+## v0.1.0-beta.2 — localization update, 2026-10-26
+
+This update adds a persisted System / 简体中文 / English language choice, localized native menus and messages, and bilingual web animation and preview controls. Existing settings without a language value retain their name, target path, and appearance and use the system language.
+
+- [x] Ten automated tests passed: name/glyph layout; locale resolution; both translation catalogs; localized validation and accessibility attributes; review-language changes and iframe propagation; real production Swift preference decoding/encoding; and the production animation status update for each playback state (including the translation/time-variable regression).
+- [x] Native app compiled for arm64 and x86_64; strict ad-hoc signature verification passed.
+- [x] On one Apple Silicon Mac, inspected English system-language selection, Chinese ↔ English switching, translated menus and validation, and preservation of the unsaved display name during switching.
+- [x] English WKWebView preview visibly rendered the ribbon and reached the localized “Preview complete” status. Chinese settings layout was also inspected; the settings sidebar scrolls when space is limited.
+- [x] The test app was closed without saving to the user's settings or launching ChatGPT. Saved-language persistence was checked by decoding/encoding production preference models, not by changing the user's live settings.
+
+Cold-start handoff, Intel hardware, clean-Mac installation, and every possible name are still unverified. The older handoff and persistence results below belong to beta.1 and were not all repeated for beta.2. Both versions remain ad-hoc signed and not Apple-notarized.
+
+本次新增可保存的中英语言选择，兼容旧设置；10 项自动测试和双架构构建通过。实机检查了中英切换、菜单与错误提示、未保存姓名保留，以及英文预览播放完成。测试没有保存用户设置或启动 ChatGPT；语言持久化由实际配置模型的编码／解码测试验证。冷启动、Intel 实机与全新 Mac 安装仍未验证。
+
+## Historical record — v0.1.0-beta.1
+
 Release track: **v0.1.0-beta.1 — community prerelease.** Publication was authorized by the project owner on 2026-10-22. This record describes the tests completed before publication; untested cases remain explicit below.
 
 ## Candidate behavior

@@ -8,21 +8,40 @@ private func themeBackground(_ theme: String) -> NSColor {
     theme == "light" ? .white : NSColor(srgbRed: 24/255, green: 24/255, blue: 24/255, alpha: 1)
 }
 
+enum AppLanguage: String, Codable {
+    case system, zh, en
+
+    func resolved(preferredLanguages: [String] = Locale.preferredLanguages) -> AppLanguage {
+        guard self == .system else { return self }
+        // Use the first supported language; default to English for other locales.
+        for language in preferredLanguages {
+            let base = language.lowercased().replacingOccurrences(of: "_", with: "-").split(separator: "-").first
+            if base == "zh" { return .zh }
+            if base == "en" { return .en }
+        }
+        return .en
+    }
+}
+
 struct Preferences: Codable {
     var name: String
     var targetPath: String
     var theme: String
-    enum CodingKeys: String, CodingKey { case name, targetPath, theme }
-    init(name: String, targetPath: String, theme: String = "dark") {
+    var language: AppLanguage
+    enum CodingKeys: String, CodingKey { case name, targetPath, theme, language }
+    init(name: String, targetPath: String, theme: String = "dark", language: AppLanguage = .system) {
         self.name = name; self.targetPath = targetPath; self.theme = theme == "light" ? "light" : "dark"
+        self.language = language
     }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         name = try values.decode(String.self, forKey: .name)
         targetPath = try values.decode(String.self, forKey: .targetPath)
         theme = (try? values.decode(String.self, forKey: .theme)) == "light" ? "light" : "dark"
+        language = (try? values.decode(AppLanguage.self, forKey: .language)) ?? .system
     }
 }
+final class SettingsContentView: NSView { override var isFlipped: Bool { true } }
 final class SplashWindow: NSWindow { override var canBecomeKey: Bool { true } }
 
 final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavigationDelegate, NSWindowDelegate, NSTextFieldDelegate {
@@ -38,6 +57,15 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     private var themeControl: NSSegmentedControl?
     private var accentLabel: NSTextField?
     private var selectedTheme = "dark"
+    private var selectedLanguage = AppLanguage.system
+    private var draftName: String?
+    private func tr(_ chinese: String, _ english: String) -> String {
+        selectedLanguage.resolved() == .zh ? chinese : english
+    }
+    private func errorDetail(_ error: Error) -> String {
+        let value = error as NSError
+        return "\(value.domain) (\(value.code))"
+    }
     private var targetLabel: NSTextField!
     private var locateButton: NSButton?
     private var statusLabel: NSTextField!
@@ -53,11 +81,13 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     private var isLaunching = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        buildMenu()
         if let data = try? Data(contentsOf: support.appendingPathComponent("settings.json")) {
             preferences = try? JSONDecoder().decode(Preferences.self, from: data)
         }
         selectedTheme = preferences?.theme ?? "dark"
+        selectedLanguage = preferences?.language ?? .system
+        targetPath = preferences?.targetPath ?? discoveredTarget()
+        buildMenu()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "," {
@@ -84,18 +114,18 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         let bar = NSMenu()
         let appItem = NSMenuItem()
         let menu = NSMenu()
-        let settings = NSMenuItem(title: "设置…", action: #selector(showSettings(_:)), keyEquivalent: ",")
+        let settings = NSMenuItem(title: tr("设置…", "Settings…"), action: #selector(showSettings(_:)), keyEquivalent: ",")
         settings.target = self; menu.addItem(settings)
         menu.addItem(.separator())
-        menu.addItem(withTitle: "退出 GPT Launcher", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: tr("退出 GPT Launcher", "Quit GPT Launcher"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = menu; bar.addItem(appItem)
-        let editItem = NSMenuItem(); let edit = NSMenu(title: "编辑")
-        edit.addItem(withTitle: "撤销", action: Selector(("undo:")), keyEquivalent: "z")
+        let editItem = NSMenuItem(); let edit = NSMenu(title: tr("编辑", "Edit"))
+        edit.addItem(withTitle: tr("撤销", "Undo"), action: Selector(("undo:")), keyEquivalent: "z")
         edit.addItem(.separator())
-        edit.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "复制", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: tr("剪切", "Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: tr("复制", "Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: tr("粘贴", "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: tr("全选", "Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = edit; bar.addItem(editItem); NSApp.mainMenu = bar
     }
 
@@ -143,68 +173,91 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         NSApp.setActivationPolicy(.regular)
         if let window = settingsWindow {
             NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil)
-            targetPath = preferences?.targetPath ?? targetPath
             if validApplication(targetPath) == nil, !discoveredTarget().isEmpty { targetPath = discoveredTarget() }
             updateTargetLabel()
             window.makeFirstResponder(nameField); return
         }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1080, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 840), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = productName; window.titlebarAppearsTransparent = true
         window.backgroundColor = themeBackground(selectedTheme); window.appearance = NSAppearance(named: selectedTheme == "light" ? .aqua : .darkAqua)
-        window.minSize = NSSize(width: 940, height: 720); window.isReleasedWhenClosed = false
+        window.minSize = NSSize(width: 940, height: 680); window.isReleasedWhenClosed = false
         window.delegate = self; window.center(); settingsWindow = window
         let content = window.contentView!
-        let left = NSView(); left.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(left)
+        let leftScroll = NSScrollView(); leftScroll.translatesAutoresizingMaskIntoConstraints = false
+        leftScroll.drawsBackground = false; leftScroll.hasVerticalScroller = true
+        leftScroll.autohidesScrollers = true; content.addSubview(leftScroll)
+        let left = SettingsContentView(); left.translatesAutoresizingMaskIntoConstraints = false; leftScroll.documentView = left
         let preview = NSView(); preview.translatesAutoresizingMaskIntoConstraints = false
         preview.wantsLayer = true; preview.layer?.backgroundColor = themeBackground(selectedTheme).cgColor
         preview.layer?.cornerRadius = 20; preview.layer?.masksToBounds = true; content.addSubview(preview); previewHost = preview
         let tag = label("A PERSONAL WELCOME", size: 10, weight: .semibold, color: NSColor(srgbRed: 0.72, green: 0.64, blue: 0.84, alpha: 1))
         accentLabel = tag
-        let title = label("让每次打开，\n都从你的名字开始。", size: 27, weight: .medium)
-        let intro = label("熟悉的彩带，多一点属于你的感觉。", size: 12, color: .secondaryLabelColor)
-        let nameTitle = label("显示名称", size: 12, weight: .semibold)
-        nameField = NSTextField(string: preferences?.name ?? "")
-        nameField.placeholderString = "例如 Alex Chen"; nameField.font = .systemFont(ofSize: 16)
+        let title = label(tr("让每次打开，\n都从你的名字开始。", "Every launch,\nyour own welcome."), size: 27, weight: .medium)
+        let intro = label(tr("熟悉的彩带，多一点属于你的感觉。", "A familiar ribbon, with a personal touch."), size: 12, color: .secondaryLabelColor)
+        let nameTitle = label(tr("显示名称", "Display name"), size: 12, weight: .semibold)
+        nameField = NSTextField(string: draftName ?? preferences?.name ?? "")
+        nameField.placeholderString = tr("例如 Alex Chen", "e.g. Alex Chen"); nameField.font = .systemFont(ofSize: 16)
         nameField.bezelStyle = .roundedBezel; nameField.controlSize = .large; nameField.delegate = self
         nameField.translatesAutoresizingMaskIntoConstraints = false
-        nameField.setAccessibilityLabel("显示名称")
-        let nameHint = label("英文字母和空格，最多 24 个字符。", size: 11, color: .secondaryLabelColor)
-        let themeTitle = label("背景外观", size: 12, weight: .semibold)
-        let themeSelector = NSSegmentedControl(labels: ["深色", "浅色"], trackingMode: .selectOne, target: self, action: #selector(themeChanged(_:)))
+        nameField.setAccessibilityLabel(tr("显示名称", "Display name"))
+        let nameHint = label(tr("英文字母和空格，最多 24 个字符。", "English letters and spaces, up to 24 characters."), size: 11, color: .secondaryLabelColor)
+        let themeTitle = label(tr("背景外观", "Appearance"), size: 12, weight: .semibold)
+        let themeSelector = NSSegmentedControl(labels: [tr("深色", "Dark"), tr("浅色", "Light")], trackingMode: .selectOne, target: self, action: #selector(themeChanged(_:)))
         themeSelector.selectedSegment = selectedTheme == "light" ? 1 : 0
         themeSelector.segmentStyle = .rounded; themeSelector.controlSize = .large
         themeSelector.translatesAutoresizingMaskIntoConstraints = false
-        themeSelector.setAccessibilityLabel("背景外观")
+        themeSelector.setAccessibilityLabel(tr("背景外观", "Appearance"))
         themeControl = themeSelector
+        let languageTitle = label("语言 / Language", size: 12, weight: .semibold)
+        let languageSelector = NSSegmentedControl(labels: [tr("跟随系统", "System"), "简体中文", "English"], trackingMode: .selectOne, target: self, action: #selector(languageChanged(_:)))
+        languageSelector.selectedSegment = [AppLanguage.system, .zh, .en].firstIndex(of: selectedLanguage) ?? 0
+        languageSelector.segmentStyle = .rounded; languageSelector.controlSize = .large
+        languageSelector.translatesAutoresizingMaskIntoConstraints = false
+        languageSelector.setAccessibilityLabel(tr("界面语言", "Interface language"))
         let targetTitle = label("ChatGPT", size: 12, weight: .semibold)
-        targetPath = preferences?.targetPath ?? discoveredTarget()
+        if targetPath.isEmpty { targetPath = discoveredTarget() }
         if validApplication(targetPath) == nil, !discoveredTarget().isEmpty { targetPath = discoveredTarget() }
         targetLabel = label("", size: 12, color: .secondaryLabelColor); updateTargetLabel()
-        let choose = button("定位 ChatGPT…", action: #selector(chooseTarget(_:)))
+        let choose = button(tr("定位 ChatGPT…", "Locate ChatGPT…"), action: #selector(chooseTarget(_:)))
         choose.isHidden = validApplication(targetPath) != nil; locateButton = choose
-        let previewButton = button("预览动画", action: #selector(preview(_:)))
-        let saveButton = button("保存并启动", action: #selector(saveAndLaunch(_:)), primary: true)
-        let saveOnly = button("保存设置", action: #selector(saveOnly(_:)))
-        statusLabel = label("名字只保存在这台 Mac，不会上传。", size: 11, color: .secondaryLabelColor)
-        let reopenHint = label("下次打开直接播放。按住 ⌥ 打开，或播放时按 ⌘ , 可返回设置。", size: 11, color: .tertiaryLabelColor)
-        let stack = NSStackView(views: [tag, title, intro, nameTitle, nameField, nameHint, themeTitle, themeSelector, targetTitle, targetLabel, choose, previewButton, saveButton, saveOnly, statusLabel, reopenHint])
+        let previewButton = button(tr("预览动画", "Preview animation"), action: #selector(preview(_:)))
+        let saveButton = button(tr("保存并启动", "Save and launch"), action: #selector(saveAndLaunch(_:)), primary: true)
+        let saveOnly = button(tr("保存设置", "Save settings"), action: #selector(saveOnly(_:)))
+        statusLabel = label(tr("名字只保存在这台 Mac，不会上传。", "Your name stays on this Mac. It is never uploaded."), size: 11, color: .secondaryLabelColor)
+        let reopenHint = label(tr("下次打开直接播放。按住 ⌥ 打开，或播放时按 ⌘ , 可返回设置。", "Hold ⌥ while opening, or press ⌘ , during playback, to return to settings."), size: 11, color: .tertiaryLabelColor)
+        let stack = NSStackView(views: [tag, title, intro, nameTitle, nameField, nameHint, themeTitle, themeSelector, languageTitle, languageSelector, targetTitle, targetLabel, choose, previewButton, saveButton, saveOnly, statusLabel, reopenHint])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 10; stack.translatesAutoresizingMaskIntoConstraints = false
         stack.setCustomSpacing(11, after: tag); stack.setCustomSpacing(18, after: intro)
         stack.setCustomSpacing(16, after: nameHint); stack.setCustomSpacing(16, after: themeSelector); stack.setCustomSpacing(16, after: choose)
         stack.setCustomSpacing(8, after: saveOnly); left.addSubview(stack)
-        let placeholder = label("你的名字，会在这里写下。\n\n填写名称后，点击「预览动画」。", size: 17, weight: .regular, color: .secondaryLabelColor)
+        let placeholder = label(tr("你的名字，会在这里写下。\n\n填写名称后，点击「预览动画」。", "Your name will appear here.\n\nEnter a name, then choose Preview animation."), size: 17, weight: .regular, color: .secondaryLabelColor)
         placeholder.alignment = .center; preview.addSubview(placeholder); previewPlaceholder = placeholder
         NSLayoutConstraint.activate([
-            left.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 30), left.topAnchor.constraint(equalTo: content.topAnchor, constant: 30), left.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24), left.widthAnchor.constraint(equalToConstant: 290),
+            leftScroll.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 30), leftScroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 24), leftScroll.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24), leftScroll.widthAnchor.constraint(equalToConstant: 340),
+            left.leadingAnchor.constraint(equalTo: leftScroll.contentView.leadingAnchor), left.trailingAnchor.constraint(equalTo: leftScroll.contentView.trailingAnchor), left.topAnchor.constraint(equalTo: leftScroll.contentView.topAnchor), left.widthAnchor.constraint(equalTo: leftScroll.contentView.widthAnchor),
+            stack.bottomAnchor.constraint(equalTo: left.bottomAnchor, constant: -16),
             stack.leadingAnchor.constraint(equalTo: left.leadingAnchor), stack.trailingAnchor.constraint(equalTo: left.trailingAnchor), stack.topAnchor.constraint(equalTo: left.topAnchor),
             nameField.widthAnchor.constraint(equalTo: stack.widthAnchor), nameField.heightAnchor.constraint(equalToConstant: 36), targetLabel.widthAnchor.constraint(equalTo: stack.widthAnchor), statusLabel.widthAnchor.constraint(equalTo: stack.widthAnchor), reopenHint.widthAnchor.constraint(equalTo: stack.widthAnchor),
             themeSelector.widthAnchor.constraint(equalTo: stack.widthAnchor), themeSelector.heightAnchor.constraint(equalToConstant: 32),
+            languageSelector.widthAnchor.constraint(equalTo: stack.widthAnchor), languageSelector.heightAnchor.constraint(equalToConstant: 32),
             previewButton.widthAnchor.constraint(equalTo: stack.widthAnchor), saveButton.widthAnchor.constraint(equalTo: stack.widthAnchor), saveOnly.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            preview.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 28), preview.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24), preview.topAnchor.constraint(equalTo: content.topAnchor, constant: 24), preview.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24),
+            preview.leadingAnchor.constraint(equalTo: leftScroll.trailingAnchor, constant: 28), preview.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24), preview.topAnchor.constraint(equalTo: content.topAnchor, constant: 24), preview.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24),
             placeholder.centerXAnchor.constraint(equalTo: preview.centerXAnchor), placeholder.centerYAnchor.constraint(equalTo: preview.centerYAnchor), placeholder.widthAnchor.constraint(lessThanOrEqualTo: preview.widthAnchor, constant: -40)
         ])
         applySettingsTheme()
         NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil); window.makeFirstResponder(nameField)
+    }
+
+    @objc private func languageChanged(_ sender: NSSegmentedControl) {
+        draftName = nameField.stringValue
+        selectedLanguage = [AppLanguage.system, .zh, .en][sender.selectedSegment]
+        let frame = settingsWindow?.frame
+        disposePreview()
+        settingsWindow?.orderOut(nil); settingsWindow = nil
+        previewHost = nil; previewPlaceholder = nil; locateButton = nil
+        buildMenu(); showSettings(nil)
+        if let frame { settingsWindow?.setFrame(frame, display: true) }
+        setStatus(tr("语言已切换，保存设置后用于下次启动。", "Language changed. Save settings to use it next time."))
     }
 
     private func applySettingsTheme() {
@@ -220,23 +273,23 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         selectedTheme = sender.selectedSegment == 1 ? "light" : "dark"
         applySettingsTheme()
         if previewWeb != nil { preview(nil) }
-        else { setStatus("外观已切换，保存后用于下次启动。") }
+        else { setStatus(tr("外观已切换，保存后用于下次启动。", "Appearance changed. Save to use it next time.")) }
     }
     private func updateTargetLabel() {
         locateButton?.isHidden = validApplication(targetPath) != nil
-        guard !targetPath.isEmpty else { targetLabel.stringValue = "未找到 ChatGPT，请先安装或定位应用。"; return }
-        targetLabel.stringValue = validApplication(targetPath) != nil ? "已找到 ChatGPT" : "ChatGPT 已移动，请重新定位。"
+        guard !targetPath.isEmpty else { targetLabel.stringValue = tr("未找到 ChatGPT，请先安装或定位应用。", "ChatGPT was not found. Install or locate the app."); return }
+        targetLabel.stringValue = validApplication(targetPath) != nil ? tr("已找到 ChatGPT", "ChatGPT found") : tr("ChatGPT 已移动，请重新定位。", "ChatGPT has moved. Locate it again.")
         targetLabel.toolTip = targetPath
     }
     @objc private func chooseTarget(_ sender: Any?) {
-        let panel = NSOpenPanel(); panel.title = "定位已安装的 ChatGPT"; panel.prompt = "选择 ChatGPT"
+        let panel = NSOpenPanel(); panel.title = tr("定位已安装的 ChatGPT", "Locate your installed ChatGPT app"); panel.prompt = tr("选择 ChatGPT", "Choose ChatGPT")
         panel.allowedContentTypes = [.application]; panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false; panel.treatsFilePackagesAsDirectories = false
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.beginSheetModal(for: settingsWindow!) { [weak self] response in
             guard let self, response == .OK, let url = panel.url else { return }
-            guard self.validApplication(url.path) != nil else { self.setStatus("请选择已安装的 ChatGPT.app。", error: true); return }
-            self.targetPath = url.path; self.updateTargetLabel(); self.setStatus("已找到 ChatGPT，保存后生效。")
+            guard self.validApplication(url.path) != nil else { self.setStatus(self.tr("请选择已安装的 ChatGPT.app。", "Select an installed ChatGPT.app."), error: true); return }
+            self.targetPath = url.path; self.updateTargetLabel(); self.setStatus(self.tr("已找到 ChatGPT，保存后生效。", "ChatGPT found. Save to keep this location."))
         }
     }
     private func setStatus(_ message: String, error: Bool = false) {
@@ -244,12 +297,12 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     }
     private func enteredName() -> String? {
         guard let name = normalizedName(nameField.stringValue) else {
-            setStatus("请输入 1–24 个英文字母或空格；暂不支持中文和符号。", error: true)
+            setStatus(tr("请输入 1–24 个英文字母或空格；暂不支持中文和符号。", "Enter 1–24 English letters or spaces. Other characters are not supported."), error: true)
             settingsWindow?.makeFirstResponder(nameField); return nil
         }
         nameField.stringValue = name; return name
     }
-    func controlTextDidChange(_ obj: Notification) { setStatus("修改后可先预览，再保存。") }
+    func controlTextDidChange(_ obj: Notification) { setStatus(tr("修改后可先预览，再保存。", "Preview your changes before saving.")) }
 
     @objc private func preview(_ sender: Any?) {
         guard let name = enteredName(), let host = previewHost else { return }
@@ -257,7 +310,7 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         guard let web = makeWeb(name: name, mode: "preview", theme: selectedTheme) else { return }
         web.frame = host.bounds; web.autoresizingMask = [.width, .height]
         previewWeb = web; host.addSubview(web); previewPlaceholder?.isHidden = true
-        setStatus("正在预览。预览不会打开目标应用。")
+        setStatus(tr("正在预览。预览不会打开目标应用。", "Previewing. The preview does not open ChatGPT."))
     }
     private func disposePreview() {
         let old = previewWeb; previewWeb = nil
@@ -267,24 +320,24 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     }
     private func save() -> Preferences? {
         guard let name = enteredName() else { return nil }
-        guard validApplication(targetPath) != nil else { updateTargetLabel(); setStatus("ChatGPT 已移动或不存在，请重新定位。", error: true); return nil }
-        let saved = Preferences(name: name, targetPath: targetPath, theme: selectedTheme)
+        guard validApplication(targetPath) != nil else { updateTargetLabel(); setStatus(tr("ChatGPT 已移动或不存在，请重新定位。", "ChatGPT has moved or is missing. Locate it again."), error: true); return nil }
+        let saved = Preferences(name: name, targetPath: targetPath, theme: selectedTheme, language: selectedLanguage)
         do {
             try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
             try JSONEncoder().encode(saved).write(to: support.appendingPathComponent("settings.json"), options: .atomic)
-            preferences = saved; setStatus("设置已保存，下次打开时生效。")
+            preferences = saved; draftName = nil; setStatus(tr("设置已保存，下次打开时生效。", "Settings saved for your next launch."))
             return saved
-        } catch { setStatus("无法保存设置：\(error.localizedDescription)", error: true); return nil }
+        } catch { setStatus(tr("无法保存设置：", "Could not save settings: ") + errorDetail(error), error: true); return nil }
     }
     @objc private func saveOnly(_ sender: Any?) { _ = save() }
     @objc private func saveAndLaunch(_ sender: Any?) { if let saved = save() { launch(saved) } }
 
     private func makeWeb(name: String, mode: String, theme: String) -> WKWebView? {
         guard let html = Bundle.main.url(forResource: "Animation", withExtension: "html") else {
-            setStatus("动画文件缺失，请重新安装完整应用。", error: true); return nil
+            setStatus(tr("动画文件缺失，请重新安装完整应用。", "Animation files are missing. Reinstall the complete app."), error: true); return nil
         }
         let config = WKWebViewConfiguration()
-        let payload = ["name": name, "mode": mode, "theme": theme]
+        let payload = ["name": name, "mode": mode, "theme": theme, "language": selectedLanguage.resolved().rawValue]
         guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return nil }
         config.userContentController.addUserScript(WKUserScript(source: "window.launcherConfig = \(json);", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController.add(self, name: "splash")
@@ -297,15 +350,15 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     private func launch(_ saved: Preferences) {
         let resolvedPath = validApplication(saved.targetPath) != nil ? saved.targetPath : discoveredTarget()
         guard let url = validApplication(resolvedPath) else {
-            showSettings(nil); setStatus("找不到 ChatGPT，请重新定位后保存。", error: true); return
+            showSettings(nil); setStatus(tr("找不到 ChatGPT，请重新定位后保存。", "ChatGPT was not found. Locate it again and save."), error: true); return
         }
         if url.path != saved.targetPath {
-            let relocated = Preferences(name: saved.name, targetPath: url.path, theme: saved.theme)
+            let relocated = Preferences(name: saved.name, targetPath: url.path, theme: saved.theme, language: saved.language)
             preferences = relocated; targetPath = url.path
             if let data = try? JSONEncoder().encode(relocated) { try? data.write(to: support.appendingPathComponent("settings.json"), options: .atomic) }
         }
         cancelLaunch()
-        guard let web = makeWeb(name: saved.name, mode: "launch", theme: saved.theme) else { showSettings(nil); setStatus("动画文件缺失，请重新安装完整应用。", error: true); return }
+        guard let web = makeWeb(name: saved.name, mode: "launch", theme: saved.theme) else { showSettings(nil); setStatus(tr("动画文件缺失，请重新安装完整应用。", "Animation files are missing. Reinstall the complete app."), error: true); return }
         isLaunching = true; opening = true; finishRequested = false; entering = false; target = nil
         session = UUID(); let token = session; events = []
         let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -323,7 +376,7 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
                 self.opening = false; self.target = app
                 guard app != nil, error == nil else {
                     self.record("target-open-failed"); self.showSettings(nil)
-                    self.setStatus("无法打开应用：\(error?.localizedDescription ?? "未知错误")", error: true); return
+                    self.setStatus(self.tr("无法打开应用：", "Could not open the app: ") + (error.map { self.errorDetail($0) } ?? self.tr("未知错误", "Unknown error")), error: true); return
                 }
                 self.record("target-opened")
                 if self.finishRequested { self.finish() } else { self.focusSplash() }
@@ -331,7 +384,7 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         }
         let timeout = DispatchWorkItem { [weak self] in
             guard let self, self.isLaunching, self.session == token else { return }
-            if self.opening { self.showSettings(nil); self.setStatus("应用启动时间过长，请检查应用后重试。", error: true) }
+            if self.opening { self.showSettings(nil); self.setStatus(self.tr("应用启动时间过长，请检查应用后重试。", "The app is taking too long to open. Check it and try again."), error: true) }
             else { self.record("animation-timeout"); self.finish() }
         }
         self.timeout = timeout; DispatchQueue.main.asyncAfter(deadline: .now() + 60, execute: timeout)
@@ -351,7 +404,7 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         finishRequested = true
         guard !opening else { return }
         guard let target, !target.isTerminated else {
-            showSettings(nil); setStatus("目标应用已经退出，请重新启动。", error: true); return
+            showSettings(nil); setStatus(tr("目标应用已经退出，请重新启动。", "The target app has closed. Launch it again."), error: true); return
         }
         target.activate(options: [.activateAllWindows])
         record(entering ? "automatic-complete" : "manual-complete")
@@ -366,8 +419,8 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let event = message.body as? String else { return }
         if message.webView === previewWeb {
-            if event == "complete" { setStatus("预览完成。喜欢的话，保存并启动即可。") }
-            if event == "renderFailed" { setStatus("动画未能渲染，请重新预览或重启应用。", error: true) }
+            if event == "complete" { setStatus(tr("预览完成。喜欢的话，保存并启动即可。", "Preview complete. Choose Save and launch when ready.")) }
+            if event == "renderFailed" { setStatus(tr("动画未能渲染，请重新预览或重启应用。", "The animation could not render. Preview again or restart the app."), error: true) }
             return
         }
         guard message.webView === splashWeb, isLaunching else { return }
@@ -380,18 +433,18 @@ final class Launcher: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
             target?.activate(options: [.activateAllWindows]); focusSplash()
         case "complete", "enterRequested": finish()
         case "cancel": showSettings(nil)
-        case "renderFailed": showSettings(nil); setStatus("动画未能渲染，请重新预览或重启应用。", error: true)
+        case "renderFailed": showSettings(nil); setStatus(tr("动画未能渲染，请重新预览或重启应用。", "The animation could not render. Preview again or restart the app."), error: true)
         default: break
         }
     }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { handleWebFailure(webView, error: error) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { handleWebFailure(webView, error: error) }
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { handleWebFailure(webView, error: NSError(domain: productName, code: 1, userInfo: [NSLocalizedDescriptionKey: "动画渲染进程已停止。"])) }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { handleWebFailure(webView, error: NSError(domain: productName, code: 1, userInfo: [NSLocalizedDescriptionKey: tr("动画渲染进程已停止。", "The animation rendering process has stopped.")])) }
     private func handleWebFailure(_ webView: WKWebView, error: Error) {
         guard webView === splashWeb || webView === previewWeb else { return }
         if (error as NSError).code == NSURLErrorCancelled { return }
         if webView === splashWeb { showSettings(nil) } else { disposePreview() }
-        setStatus("无法播放动画：\(error.localizedDescription)", error: true)
+        setStatus(tr("无法播放动画：", "Could not play the animation: ") + errorDetail(error), error: true)
     }
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = navigationAction.request.url, url.isFileURL else { decisionHandler(.cancel); return }

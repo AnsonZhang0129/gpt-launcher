@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readFile, mkdir, writeFile, copyFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -7,5 +7,7 @@ await mkdir(path.join(root, 'build'), { recursive: true });
 const result = await build({ entryPoints: [path.join(root, 'src/animation.js')], bundle: true, minify: true, format: 'iife', write: false, loader: { '.svg': 'text' } });
 const shell = await readFile(path.join(root, 'src/animation.html'), 'utf8');
 await writeFile(path.join(root, 'build/Animation.html'), shell.replace('__APP__', () => result.outputFiles[0].text));
-await copyFile(path.join(root, 'src/review.html'), path.join(root, 'build/Review.html'));
+const review = await build({ entryPoints: [path.join(root, 'src/review.js')], bundle: true, minify: true, format: 'iife', write: false });
+const reviewShell = await readFile(path.join(root, 'src/review.html'), 'utf8');
+await writeFile(path.join(root, 'build/Review.html'), reviewShell.replace('__REVIEW_APP__', () => review.outputFiles[0].text));
 console.log('Built self-contained, offline animation and review page.');
